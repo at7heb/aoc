@@ -32,53 +32,36 @@ defmodule AdventOfCode.Day01 do
 
   def part2(input) do
     input
+    |> words_to_digits()
     |> make_list()
     |> find_values2()
     |> compute_calibration()
   end
 
+  def words_to_digits(text) do
+    text
+    |> String.replace("zero", "z0o", global: true)
+    |> String.replace("one", "o1e", global: true)
+    |> String.replace("two", "t2o", global: true)
+    |> String.replace("three", "t3e", global: true)
+    |> String.replace("four", "f4r", global: true)
+    |> String.replace("five", "f5e", global: true)
+    |> String.replace("six", "s6x", global: true)
+    |> String.replace("seven", "s7n", global: true)
+    |> String.replace("eight", "e8t", global: true)
+    |> String.replace("nine", "n9e", global: true)
+  end
+
   def find_values2(input_list) do
-    v1 = Enum.map(input_list, fn record -> first_number_forward(record) end)
-    v2 = Enum.map(input_list, fn record -> first_number_reverse(String.reverse(record)) end)
+    v1 = Enum.map(input_list, fn record -> first_number(record) end)
+    v2 = Enum.map(input_list, fn record -> first_number(String.reverse(record)) end)
     v12 = Enum.zip([v1, v2])
     Enum.map(v12, fn {a, b} -> String.to_integer(a <> b) end)
   end
 
-  def first_number_forward(record) do
-    pat = ~r/zero|one|two|three|four|five|six|seven|eight|nine|[0-9]/
-    first_number_common(pat, record)
-  end
-
-  def first_number_reverse(record) do
-    pat = ~r/orez|eno|owt|eerht|ruof|evif|xis|neves|thgie|enin|[0-9]/
-    first_number_common(pat, record)
-  end
-
-  def first_number_common(pat, record) do
+  def first_number(record) do
+    pat = ~r/[0-9]/
     [digit] = Regex.run(pat, record, capture: :first)
-
-    case digit do
-      "zero" -> "0"
-      "orez" -> "0"
-      "one" -> "1"
-      "eno" -> "1"
-      "two" -> "2"
-      "owt" -> "2"
-      "three" -> "3"
-      "eerht" -> "3"
-      "four" -> "4"
-      "ruof" -> "4"
-      "five" -> "5"
-      "evif" -> "5"
-      "six" -> "6"
-      "xis" -> "6"
-      "seven" -> "7"
-      "neves" -> "7"
-      "eight" -> "8"
-      "thgie" -> "8"
-      "nine" -> "9"
-      "enin" -> "9"
-      _ -> digit
-    end
+    digit
   end
 end
