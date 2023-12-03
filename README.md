@@ -1,4 +1,6 @@
-# Advent of Code Elixir Starter
+# My Advent of Code 2023 Repository
+# Based on "Advent of Code Elixir Starter"
+(see [Starter](https://github.com/mhanberg/advent-of-code-elixir-starter))
 
 A batteries included starter pack for participating in [Advent of Code](https://www.adventofcode.com) using Elixir!
 
