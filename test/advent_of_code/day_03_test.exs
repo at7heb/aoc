@@ -3,7 +3,6 @@ defmodule AdventOfCode.Day03Test do
 
   import AdventOfCode.Day03
 
-  @tag :skip
   test "part1" do
     input = AdventOfCode.Day03.get("03-1-test")
     result = part1(input)
