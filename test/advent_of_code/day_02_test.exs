@@ -4,17 +4,16 @@ defmodule AdventOfCode.Day02Test do
   import AdventOfCode.Day02
 
   test "part1" do
-    input = Day02.get("02-1-test")
+    input = AdventOfCode.Day02.get("02-1-test")
     result = part1(input)
 
-    assert result
+    assert result == 8
   end
 
-  @tag :skip
   test "part2" do
-    input = Day02.get("02-2-test")
+    input = AdventOfCode.Day02.get("02-1-test")
     result = part2(input)
 
-    assert result
+    assert result == 2286
   end
 end
