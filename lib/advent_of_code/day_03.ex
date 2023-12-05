@@ -28,7 +28,7 @@ defmodule AdventOfCode.Day03 do
       |> List.flatten()
       |> Enum.filter(&(&1 > 0))
 
-    %{state | parts: parts_list} |> dbg
+    %{state | parts: parts_list}
   end
 
   def number_if_symbol_adjacent({index, start, len}, %__MODULE__{} = state) do
@@ -113,27 +113,21 @@ defmodule AdventOfCode.Day03 do
   end
 
   def make_answer2(%__MODULE__{} = state) do
-    state |> dbg
-
     gsym_adjacent_list =
       Enum.reduce(state.numbers, %{}, fn numloc, map -> adjacent_to_gsym(numloc, map, state) end)
-      |> dbg
 
     adjacent_to_two =
       Enum.filter(Map.keys(gsym_adjacent_list), fn gsymloc ->
         Map.get(gsym_adjacent_list, gsymloc) |> length == 2
       end)
-      |> dbg
 
     ratios =
       Enum.map(adjacent_to_two, &(Map.get(gsym_adjacent_list, &1) |> one_ratio(state)))
-      |> dbg
       |> List.flatten()
-      |> dbg
       |> Enum.filter(&(&1 > 0))
 
     ratio_sum = Enum.sum(ratios)
-    %{state | ratio_sum: ratio_sum} |> dbg
+    %{state | ratio_sum: ratio_sum}
   end
 
   def one_ratio(string_extents, %__MODULE__{} = state)
@@ -160,8 +154,8 @@ defmodule AdventOfCode.Day03 do
 
   def adjacent_to_gsym({index, start, len} = numloc, map, %__MODULE__{} = state) do
     # see if any gear symbol surrounds this number; several might
-    list_to_check = positions_around_number(index, start, len) |> MapSet.new() |> dbg
-    all_gear_locations = MapSet.intersection(list_to_check, state.gearsyms) |> dbg
+    list_to_check = positions_around_number(index, start, len) |> MapSet.new()
+    all_gear_locations = MapSet.intersection(list_to_check, state.gearsyms)
 
     Enum.reduce(
       all_gear_locations,
@@ -170,7 +164,6 @@ defmodule AdventOfCode.Day03 do
         Map.put(map, one_location, [numloc | Map.get(map, one_location, [])])
       end
     )
-    |> dbg
   end
 
   def find_numbers(text_line, index) do
@@ -192,9 +185,7 @@ defmodule AdventOfCode.Day03 do
   end
 
   def get(file_fragment) do
-    # |> dbg
     file_name = Path.join([".", "games", "day-" <> file_fragment <> ".txt"])
-    # |> dbg
     File.read!(file_name) |> String.trim()
   end
 end

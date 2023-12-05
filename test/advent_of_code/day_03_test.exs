@@ -14,6 +14,6 @@ defmodule AdventOfCode.Day03Test do
     input = AdventOfCode.Day03.get("03-1-test")
     result = part2(input)
 
-    assert result == nil
+    assert result == 467_835
   end
 end
