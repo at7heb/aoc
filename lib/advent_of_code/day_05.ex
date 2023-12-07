@@ -16,7 +16,7 @@ defmodule AdventOfCode.Day05 do
   end
 
   def find_location(seed, %__MODULE{} = state) do
-    if rem(seed, 5_000_000) == 0, do: dbg({"periodic", seed, :os.system_time(:seconds)})
+    if rem(seed, 25_000_000) == 0, do: IO.inspect({"periodic", seed, :os.system_time(:seconds)})
 
     seed
     |> map_with(:seed_soil, state)
