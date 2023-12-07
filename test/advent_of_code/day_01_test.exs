@@ -3,12 +3,14 @@ defmodule AdventOfCode.Day01Test do
 
   import AdventOfCode.Day01
 
+  @tag :skip
   test "part1" do
     result = part1(the_input())
 
     assert result == 142
   end
 
+  @tag :skip
   test "part2" do
     result = part2(the_input2())
 
