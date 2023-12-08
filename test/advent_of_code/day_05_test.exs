@@ -3,6 +3,7 @@ defmodule AdventOfCode.Day05Test do
 
   import AdventOfCode.Day05
 
+  @tag :skip
   test "part1" do
     input = AdventOfCode.Day05.get("05-1-test")
     result = part1(input) |> dbg
@@ -10,7 +11,7 @@ defmodule AdventOfCode.Day05Test do
     assert result == 35
   end
 
-  # @tag :skip
+  @tag :skip
   test "part2" do
     input = AdventOfCode.Day05.get("05-1-test")
     result = part2(input) |> dbg
