@@ -3,7 +3,7 @@ defmodule AdventOfCode.Day06Test do
 
   import AdventOfCode.Day06
 
-  # @tag :skip
+  @tag :skip
   test "part1" do
     input = AdventOfCode.Day06.get("06-1-test")
     result = part1(input)
@@ -11,7 +11,7 @@ defmodule AdventOfCode.Day06Test do
     assert result == 288
   end
 
-  # @tag :skip
+  @tag :skip
   test "part2" do
     input = AdventOfCode.Day06.get("06-1-test")
     result = part2(input)
