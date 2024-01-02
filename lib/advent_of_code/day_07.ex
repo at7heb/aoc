@@ -38,27 +38,25 @@ defmodule AdventOfCode.Day07 do
 
     hand_patterns =
       Enum.map(hands, fn hand ->
-        Enum.frequencies(hand) |> Map.values() |> Enum.sort()
+        Enum.frequencies(hand) |> Map.values() |> Enum.sort() |> List.to_tuple()
       end)
 
     hand_ranks =
       case part do
         1 ->
-          Enum.map(hand_patterns, fn pat -> rank_for_hand_pattern(pat) end)
+          Enum.map(hand_patterns, fn pat_tuple -> rank_for_hand_pattern(pat_tuple) end)
 
         2 ->
           jack_counts = Enum.map(hands, fn hand -> count_jacks(hand) end)
+          {hand_patterns, jack_counts} |> dbg
 
-          Enum.map(Enum.zip(hand_patterns, jack_counts), fn {pat, n_jacks} ->
-            rank_for_hand_pattern2(pat, n_jacks)
+          Enum.map(Enum.zip(hand_patterns, jack_counts), fn {pat_tuple, n_jacks} ->
+            rank_for_hand_pattern2(pat_tuple, n_jacks)
           end)
 
         _ ->
           {:error, "illegal part: #{part}"}
       end
-
-    hand_ranks =
-      Enum.map(hand_patterns, fn pat -> rank_for_hand_pattern(pat) end)
 
     hand_strength0 =
       Enum.zip(hand_ranks, hands)
@@ -82,9 +80,7 @@ defmodule AdventOfCode.Day07 do
     |> dbg
   end
 
-  def rank_for_hand_pattern(pat) when is_list(pat) do
-    pat_tuple = List.to_tuple(pat)
-
+  def rank_for_hand_pattern(pat_tuple) when is_tuple(pat_tuple) do
     case pat_tuple do
       {5} ->
         "7"
@@ -107,6 +103,36 @@ defmodule AdventOfCode.Day07 do
       {1, 1, 1, 1, 1} ->
         "1"
     end
+  end
+
+  def rank_for_hand_pattern2(pat_tuple, n_jacks) do
+    case {pat_tuple, n_jacks} do
+      {_, 0} -> rank_for_hand_pattern(pat_tuple)
+      {{5}, 5} -> "7"
+      {{5}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{1, 4}, 1} -> "7"
+      {{1, 4}, 4} -> "7"
+      {{1, 4}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{2, 3}, 2} -> "7"
+      {{2, 3}, 3} -> "7"
+      {{2, 3}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{1, 1, 3}, 1} -> "6"
+      {{1, 1, 3}, 3} -> "6"
+      {{1, 1, 3}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{1, 2, 2}, 1} -> "5"
+      {{1, 2, 2}, 2} -> "6"
+      {{1, 1, 2}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{1, 1, 1, 2}, 1} -> "4"
+      {{1, 1, 1, 2}, 2} -> "4"
+      {{1, 1, 1, 2}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      {{1, 1, 1, 1, 1}, 1} -> "2"
+      {{1, 1, 1, 1, 1}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
+      _ -> {:error, "fell through in case #{pat_tuple} #{n_jacks}"}
+    end
+  end
+
+  def count_jacks(card) do
+    card |> Enum.filter(fn a -> a == "B" end) |> length()
   end
 
   def part2(input) do
