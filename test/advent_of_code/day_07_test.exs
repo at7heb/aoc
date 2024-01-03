@@ -6,17 +6,17 @@ defmodule AdventOfCode.Day07Test do
   @tag :skip
   test "part1" do
     input = AdventOfCode.Day00.get("07-1-test")
-    result = part1(input)
+    {result, _} = part1(input)
     result |> dbg
-    assert result
+    assert result == 6440
   end
 
-  # @tag :skip
+  @tag :skip
   test "part2" do
     input = AdventOfCode.Day00.get("07-1-test")
     IO.puts("Day 7 Part 2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    result = part2(input)
-
-    assert result
+    {result, _} = part2(input)
+    result |> dbg
+    assert result == 5905
   end
 end
