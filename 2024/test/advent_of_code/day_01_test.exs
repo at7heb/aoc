@@ -2,12 +2,14 @@ defmodule AdventOfCode.Day01Test do
   use ExUnit.Case
 
   import AdventOfCode.Day01
+  @mh AdventOfCode
+  @day "01"
 
-  @tag :skip
+  # @tag :skip
   test "part1" do
-    result = part1(the_input())
+    result = part1(@mh.Day00.get_test(@day))
 
-    assert result == 142
+    assert result == 11
   end
 
   @tag :skip
