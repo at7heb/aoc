@@ -7,8 +7,6 @@ defmodule AdventOfCode.Day01 do
     Enum.zip(l1, l2)
     |> Enum.map(fn {a, b} -> abs(a - b) end)
     |> Enum.sum()
-
-    # |> dbg
   end
 
   def make_list(input) do
@@ -24,7 +22,6 @@ defmodule AdventOfCode.Day01 do
 
     Enum.map(l1, fn v -> v * count_in(v, l2) end)
     |> Enum.sum()
-    |> dbg
   end
 
   def count_in(val, list) do
