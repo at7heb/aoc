@@ -1,22 +1,49 @@
 defmodule AdventOfCode.Day02 do
   def part1(input) do
-    input
-    |> convert_to_game_records()
-    |> calculate_game_index_sums()
+    %{input: input}
+    |> parse_lines()
+    |> make_diffs()
+    |> only_positive_1_to_3()
+    |> only_negative_1_to_3()
+    |> sum_only_lengths()
   end
 
-  def part2(input) do
+  def parse_lines(%{input: input} = state) do
     input
-    |> convert_to_game_records()
-    |> calculate_game_powers()
-    |> Enum.sum()
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line -> String.split(line, " ") |> Enum.map(&String.to_integer(&1)) end)
+    |> update_state(:parsed_lines, state)
   end
 
-  def get(file_fragment) do
-    # |> dbg
-    file_name = Path.join([".", "games", "day-" <> file_fragment <> ".txt"])
-    # |> dbg
-    File.read!(file_name) |> String.trim()
+  def make_diffs(%{parsed_lines: lines} = state) do
+    lines
+    |> Enum.map(fn line ->
+      Enum.reduce(tl(line), {[], hd(line)}, fn next_in_line, {acc_list, prev_in_line} ->
+        {[next_in_line - prev_in_line | acc_list], next_in_line}
+      end)
+    end)
+    |> Enum.map(&elem(&1, 0))
+    |> update_state(:diffed_lines, state)
+  end
+
+  def only_positive_1_to_3(%{diffed_lines: lines} = state) do
+    lines
+    |> Enum.filter(&Enum.all?(&1, fn v -> v > 0 and v <= 3 end))
+    |> update_state(:only_positive_1_to_3, state)
+  end
+
+  def only_negative_1_to_3(%{diffed_lines: lines} = state) do
+    lines
+    |> Enum.filter(&Enum.all?(&1, fn v -> v < 0 and v >= -3 end))
+    |> update_state(:only_negative_1_to_3, state)
+  end
+
+  def sum_only_lengths(%{only_positive_1_to_3: op, only_negative_1_to_3: on} = _state) do
+    length(op) + length(on)
+  end
+
+  def update_state(value, key, %{} = state) when is_atom(key) do
+    Map.put(state, key, value)
   end
 
   def convert_to_game_records(text) do
@@ -104,5 +131,12 @@ defmodule AdventOfCode.Day02 do
   def get_max(game, color) do
     Enum.map(game, fn draw -> Map.get(draw, color) end)
     |> Enum.max()
+  end
+
+  def part2(input) do
+    input
+    |> convert_to_game_records()
+    |> calculate_game_powers()
+    |> Enum.sum()
   end
 end
