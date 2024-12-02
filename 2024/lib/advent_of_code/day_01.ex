@@ -22,9 +22,9 @@ defmodule AdventOfCode.Day01 do
   def part2(input) do
     {l1, l2} = make_list(input)
 
-    Enum.map(l1, fn v -> v * count_in(v, l2) end)
-    |> Enum.sum()
-    |> dbg
+    answer1 =
+      Enum.map(l1, fn v -> v * count_in(v, l2) end)
+      |> Enum.sum()
   end
 
   def count_in(val, list) do
