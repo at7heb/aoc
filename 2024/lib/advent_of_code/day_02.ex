@@ -46,97 +46,60 @@ defmodule AdventOfCode.Day02 do
     Map.put(state, key, value)
   end
 
-  def convert_to_game_records(text) do
-    text_list = String.split(text, "\n")
-
-    Enum.reduce(text_list, %{}, fn record_text, games ->
-      convert_one_text_record(record_text, games)
-    end)
+  def part2(input) do
+    %{input: input}
+    |> parse_lines()
+    |> try_each_line()
+    |> count_okay_lines()
   end
 
-  def convert_one_text_record(text, games) do
-    game_index = get_game_index(text)
-    record = get_record_items(text)
-    Map.put(games, game_index, record)
+  def try_each_line(%{parsed_lines: parsed} = state) do
+    parsed
+    |> Enum.map(&add_without_one(&1))
+    |> Enum.map(&if_any_okay_then_1(&1))
+    |> update_state(:okay_lines, state)
   end
 
-  def get_game_index(text) do
-    [head, _rest] = String.split(text, ": ")
-    String.replace(head, "Game ", "") |> String.to_integer()
+  def add_without_one(l) when is_list(l) do
+    0..(length(l) - 1)
+    |> Enum.shuffle()
+    |> Enum.reduce([l], fn index, acc -> acc ++ [List.delete_at(l, index)] end)
   end
 
-  def get_record_items(text) do
-    [_head, all_draws] = String.split(text, ": ")
-
-    String.split(all_draws, "; ")
-    |> Enum.map(fn each_draw -> create_draws_map(each_draw) end)
-
-    # |> dbg
-  end
-
-  def create_draws_map(draws) do
-    group_record = String.split(draws, ", ") |> Enum.map(&String.trim(&1))
-
-    Enum.reduce(group_record, %{red: 0, green: 0, blue: 0}, fn one_color, counts ->
-      update_map_for_count(counts, one_color)
-    end)
-  end
-
-  def update_map_for_count(count_map, color_count) do
-    pat = ~r/^[0-9]+/
-    [digits] = Regex.run(pat, color_count, capture: :first)
-    count = String.to_integer(digits)
-
-    cond do
-      String.contains?(color_count, "red") -> Map.put(count_map, :red, count)
-      String.contains?(color_count, "green") -> Map.put(count_map, :green, count)
-      String.contains?(color_count, "blue") -> Map.put(count_map, :blue, count)
+  def if_any_okay_then_1(lofls) when is_list(lofls) do
+    lofls
+    |> Enum.any?(fn a_list -> if_this_okay_then_true(a_list) end)
+    |> case do
+      1 -> 1
+      true -> 1
+      _ -> 0
     end
   end
 
-  def calculate_game_index_sums(games_map) do
-    Enum.reduce(games_map, 0, fn one_game, acc -> check_one_game(one_game, acc) end)
+  def if_this_okay_then_true(l) when is_list(l) do
+    diffs = diffs_of_list(l)
+
+    cond do
+      is_ascending(diffs) -> true
+      is_descending(diffs) -> true
+      true -> false
+    end
   end
 
-  def check_one_game(game, accum) do
-    # game |> dbg
-    {game_index, draw_list} = game
-    okay = Enum.all?(draw_list, &all_in_bounds(&1))
-    if okay, do: accum + game_index, else: accum
+  def diffs_of_list(l) when is_list(l) do
+    Enum.reduce(tl(l), {[], hd(l)}, fn next_in_line, {acc_list, prev_in_line} ->
+      {[next_in_line - prev_in_line | acc_list], next_in_line}
+    end)
+    |> elem(0)
   end
 
-  def all_in_bounds(map) do
-    # 12 red cubes, 13 green cubes, and 14 blue cubes
-    rlim = 12
-    glim = 13
-    blim = 14
-    map.red <= rlim and map.green <= glim and map.blue <= blim
+  def is_ascending(diffs) when is_list(diffs) do
+    Enum.all?(diffs, &(&1 > 0 && &1 <= 3))
   end
 
-  def calculate_game_powers(games_map) do
-    Enum.map(games_map, fn {_index, one_game} -> one_game_power(one_game) end)
+  def is_descending(diffs) when is_list(diffs) do
+    Enum.all?(diffs, &(&1 < 0 && &1 >= -3))
   end
 
-  def one_game_power(one_game) do
-    # one_game |> dbg
-    # |> dbg
-    rmax = get_max(one_game, :red)
-    # |> dbg
-    gmax = get_max(one_game, :green)
-    # |> dbg
-    bmax = get_max(one_game, :blue)
-    rmax * gmax * bmax
-  end
-
-  def get_max(game, color) do
-    Enum.map(game, fn draw -> Map.get(draw, color) end)
-    |> Enum.max()
-  end
-
-  def part2(input) do
-    input
-    |> convert_to_game_records()
-    |> calculate_game_powers()
-    |> Enum.sum()
-  end
+  def count_okay_lines(%{okay_lines: okl}), do: Enum.sum(okl)
 end
