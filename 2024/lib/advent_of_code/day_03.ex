@@ -27,7 +27,7 @@ defmodule AdventOfCode.Day03 do
 
     case c do
       nil ->
-        state |> dbg
+        state
 
       _ ->
         a = String.slice(s, elem(c["a"], 0), elem(c["a"], 1)) |> String.to_integer()
@@ -45,7 +45,6 @@ defmodule AdventOfCode.Day03 do
       |> find_multiplies2()
 
     Enum.sum(answer.products)
-    |> dbg
   end
 
   def find_multiplies2(%__MODULE__{subject: ""} = state), do: state
@@ -59,20 +58,18 @@ defmodule AdventOfCode.Day03 do
     do_dont_search_string = String.slice(s, start, length)
     c_do = Regex.named_captures(p_do, do_dont_search_string, return: :index)
     c_dont = Regex.named_captures(p_dont, do_dont_search_string, return: :index)
-    IO.puts("---------------------------------------------------")
-    s |> dbg
 
     cond do
       # no mul() instruction:
-      nil == c_mul -> %{state | subject: ""} |> dbg
+      nil == c_mul -> %{state | subject: ""}
       # neither do() nor don't() instructions before mul()
-      nil == c_do and nil == c_dont -> match_multiply(state, c_mul) |> dbg
+      nil == c_do and nil == c_dont -> match_multiply(state, c_mul)
       # a do() before the mul(), but no don't()
-      nil == c_dont -> match_multiply(%{state | enabled: true}, c_mul) |> dbg
+      nil == c_dont -> match_multiply(%{state | enabled: true}, c_mul)
       # a don't() before the mul(), but no do()
-      nil == c_do -> match_multiply(%{state | enabled: false}, c_mul) |> dbg
+      nil == c_do -> match_multiply(%{state | enabled: false}, c_mul)
       # both do() and don't(). believe the second and scan after it
-      true -> handle_do_and_dont(state, c_do, c_dont) |> dbg
+      true -> handle_do_and_dont(state, c_do, c_dont)
     end
     |> find_multiplies2()
   end
