@@ -1,191 +1,107 @@
 defmodule AdventOfCode.Day03 do
-  defstruct schematic: %{},
-            numbers: MapSet,
-            symbols: MapSet,
-            gearsyms: MapSet,
-            last: 0,
-            parts: [],
-            ratio_sum: 0
+  defstruct subject: "",
+            products: [],
+            enabled: true
 
   # schematic is a map of linenumber -> corresponding line of schematic
   # numbers is a set of {linenumber, loc, length} extents of numbers
   # symbols is a set of {linenumber, loc} symbol locations (just 1 character)
 
   def part1(input) do
-    %__MODULE__{}
-    |> setup(input)
-    |> make_part_list()
-    |> make_answer()
-  end
+    answer =
+      %__MODULE__{}
+      |> setup(input)
+      |> find_multiplies()
 
-  def make_answer(%__MODULE__{} = state) do
-    Enum.sum(state.parts)
-  end
-
-  def make_part_list(%__MODULE__{} = state) do
-    parts_list =
-      Enum.map(state.numbers, &number_if_symbol_adjacent(&1, state))
-      |> List.flatten()
-      |> Enum.filter(&(&1 > 0))
-
-    %{state | parts: parts_list}
-  end
-
-  def number_if_symbol_adjacent({index, start, len}, %__MODULE__{} = state) do
-    list_to_check = positions_around_number(index, start, len)
-    is_part_number = Enum.any?(list_to_check, &MapSet.member?(state.symbols, &1))
-
-    if is_part_number,
-      do:
-        String.slice(
-          Map.get(state.schematic, index),
-          start,
-          len
-        )
-        |> String.to_integer(),
-      else: 0
-  end
-
-  def positions_around_number(index, start, len) do
-    left = {index, start - 1}
-    right = {index, start + len}
-    above = Enum.map((start - 1)..(start + len), &{index - 1, &1})
-    below = Enum.map((start - 1)..(start + len), &{index + 1, &1})
-    [left, right, above, below] |> List.flatten()
+    Enum.sum(answer.products)
   end
 
   def setup(%__MODULE__{} = state, input) do
-    state
-    |> add_schematic(input)
-    |> add_numbers_and_symbols()
+    s = String.replace(input, "\n", "")
+    %{state | subject: s}
   end
 
-  def add_schematic(%__MODULE__{} = state, input) do
-    {schematic, _} =
-      String.split(input, "\n")
-      |> Enum.reduce(
-        {%{}, 0},
-        fn line, {schm, index} ->
-          schm1 = Map.put(schm, index, String.trim(line))
-          {schm1, index + 1}
-        end
-      )
+  def find_multiplies(%__MODULE__{subject: s} = state) do
+    p = ~r/mul\((?<a>[\d]+),(?<b>[\d]+)\)/U
+    c = Regex.named_captures(p, s, return: :index)
 
-    %{state | schematic: schematic, last: map_size(schematic) - 1}
-  end
+    case c do
+      nil ->
+        state |> dbg
 
-  def add_numbers_and_symbols(%__MODULE__{} = state) do
-    add_numbers(state) |> add_symbols()
-  end
-
-  def add_numbers(%__MODULE__{} = state) do
-    numbers =
-      Enum.map(
-        0..state.last,
-        fn index -> find_numbers(Map.get(state.schematic, index), index) end
-      )
-      |> List.flatten()
-      |> MapSet.new()
-
-    %{state | numbers: numbers}
-  end
-
-  def add_symbols(%__MODULE__{} = state) do
-    symbols =
-      Enum.map(
-        0..state.last,
-        fn index ->
-          find_symbols(Map.get(state.schematic, index), index)
-        end
-      )
-      |> List.flatten()
-      |> MapSet.new()
-
-    %{state | symbols: symbols}
+      _ ->
+        a = String.slice(s, elem(c["a"], 0), elem(c["a"], 1)) |> String.to_integer()
+        b = String.slice(s, elem(c["b"], 0), elem(c["b"], 1)) |> String.to_integer()
+        r = String.slice(s, elem(c["b"], 0) + elem(c["b"], 1) + 1, 999_999_999)
+        new_state = %{state | products: [a * b | state.products], subject: r}
+        find_multiplies(new_state)
+    end
   end
 
   def part2(input) do
-    %__MODULE__{}
-    |> setup(input)
-    |> make_gear_list()
-    |> make_answer2()
-    |> Map.get(:ratio_sum)
+    answer =
+      %__MODULE__{}
+      |> setup(input)
+      |> find_multiplies2()
+
+    Enum.sum(answer.products)
+    |> dbg
   end
 
-  def make_answer2(%__MODULE__{} = state) do
-    gsym_adjacent_list =
-      Enum.reduce(state.numbers, %{}, fn numloc, map -> adjacent_to_gsym(numloc, map, state) end)
+  def find_multiplies2(%__MODULE__{subject: ""} = state), do: state
 
-    adjacent_to_two =
-      Enum.filter(Map.keys(gsym_adjacent_list), fn gsymloc ->
-        Map.get(gsym_adjacent_list, gsymloc) |> length == 2
-      end)
+  def find_multiplies2(%__MODULE__{subject: s} = state) do
+    p_mul = ~r/mul\((?<a>[\d]+),(?<b>[\d]+)\)/U
+    p_do = ~r/(?<d>do\(\))/
+    p_dont = ~r/(?<d>don't\(\))/
+    c_mul = Regex.named_captures(p_mul, s, return: :index)
+    {start, length} = do_dont_region(c_mul["b"])
+    do_dont_search_string = String.slice(s, start, length)
+    c_do = Regex.named_captures(p_do, do_dont_search_string, return: :index)
+    c_dont = Regex.named_captures(p_dont, do_dont_search_string, return: :index)
+    IO.puts("---------------------------------------------------")
+    s |> dbg
 
-    ratios =
-      Enum.map(adjacent_to_two, &(Map.get(gsym_adjacent_list, &1) |> one_ratio(state)))
-      |> List.flatten()
-      |> Enum.filter(&(&1 > 0))
-
-    ratio_sum = Enum.sum(ratios)
-    %{state | ratio_sum: ratio_sum}
+    cond do
+      # no mul() instruction:
+      nil == c_mul -> %{state | subject: ""} |> dbg
+      # neither do() nor don't() instructions before mul()
+      nil == c_do and nil == c_dont -> match_multiply(state, c_mul) |> dbg
+      # a do() before the mul(), but no don't()
+      nil == c_dont -> match_multiply(%{state | enabled: true}, c_mul) |> dbg
+      # a don't() before the mul(), but no do()
+      nil == c_do -> match_multiply(%{state | enabled: false}, c_mul) |> dbg
+      # both do() and don't(). believe the second and scan after it
+      true -> handle_do_and_dont(state, c_do, c_dont) |> dbg
+    end
+    |> find_multiplies2()
   end
 
-  def one_ratio(string_extents, %__MODULE__{} = state)
-      when is_list(string_extents) and length(string_extents) == 2 do
-    Enum.map(string_extents, fn {indx, loc, len} = _xtnt ->
-      Map.get(state.schematic, indx) |> String.slice(loc, len) |> String.to_integer()
-    end)
-    |> Enum.product()
+  def match_multiply(%__MODULE__{subject: s} = state, c_mul) do
+    a = String.slice(s, elem(c_mul["a"], 0), elem(c_mul["a"], 1)) |> String.to_integer()
+    b = String.slice(s, elem(c_mul["b"], 0), elem(c_mul["b"], 1)) |> String.to_integer()
+    r = String.slice(s, elem(c_mul["b"], 0) + elem(c_mul["b"], 1) + 1, 999_999_999)
+
+    case state.enabled do
+      true -> %{state | products: [a * b | state.products], subject: r}
+      false -> %{state | subject: r}
+    end
   end
 
-  def make_gear_list(%__MODULE__{} = state) do
-    gsymbols =
-      Enum.map(
-        0..state.last,
-        fn index ->
-          find_gear_symbols(Map.get(state.schematic, index), index)
-        end
-      )
-      |> List.flatten()
-      |> MapSet.new()
-
-    %{state | gearsyms: gsymbols}
-  end
-
-  def adjacent_to_gsym({index, start, len} = numloc, map, %__MODULE__{} = state) do
-    # see if any gear symbol surrounds this number; several might
-    list_to_check = positions_around_number(index, start, len) |> MapSet.new()
-    all_gear_locations = MapSet.intersection(list_to_check, state.gearsyms)
-
-    Enum.reduce(
-      all_gear_locations,
-      map,
-      fn one_location, map ->
-        Map.put(map, one_location, [numloc | Map.get(map, one_location, [])])
+  def handle_do_and_dont(%__MODULE__{subject: s} = state, c_do, c_dont) do
+    {enable, position} =
+      if elem(c_do["d"], 0) > elem(c_dont["d"], 0) do
+        # do() is later; advance past and enable
+        {true, elem(c_do["d"], 0) + elem(c_do["d"], 1)}
+      else
+        # don't() is second, advance past and disable
+        {false, elem(c_dont["d"], 0) + elem(c_dont["d"], 1)}
       end
-    )
+
+    new_s = String.slice(s, position, 999_999_999)
+    %{state | subject: new_s, enable: enable}
   end
 
-  def find_numbers(text_line, index) do
-    Regex.scan(~r/\d+/, text_line, return: :index)
-    |> Enum.map(fn [{loc, len}] -> {index, loc, len} end)
-    |> List.flatten()
-  end
-
-  def find_symbols(text_line, index) do
-    Regex.scan(~r/[^0-9.]/, text_line, return: :index)
-    |> Enum.map(fn [{loc, _len}] -> {index, loc} end)
-    |> List.flatten()
-  end
-
-  def find_gear_symbols(text_line, index) do
-    Regex.scan(~r/[*]/, text_line, return: :index)
-    |> Enum.map(fn [{loc, _len}] -> {index, loc} end)
-    |> List.flatten()
-  end
-
-  def get(file_fragment) do
-    file_name = Path.join([".", "games", "day-" <> file_fragment <> ".txt"])
-    File.read!(file_name) |> String.trim()
-  end
+  def do_dont_region(nil), do: {0, 1}
+  def do_dont_region({ndx, _length}), do: {0, ndx}
 end
