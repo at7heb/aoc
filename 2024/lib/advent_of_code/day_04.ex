@@ -1,76 +1,97 @@
 defmodule AdventOfCode.Day04 do
-  defstruct card: 0, winners: MapSet.new(), elves: MapSet.new(), winnings: 0, count: 1
+  defstruct puzzle: %{}, xlocations: [], count: 0, alocations: []
 
-  def new(text_line) do
-    # parse lines like "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53"
-    [card_id, rest] = String.split(text_line, ":")
-    [winners, elves] = String.split(rest, "|")
-    [[index]] = Regex.scan(~r/\d+/, card_id)
-    winning_numbers = String.split(winners) |> Enum.map(&String.to_integer(&1)) |> MapSet.new()
-    elves_numbers = String.split(elves) |> Enum.map(&String.to_integer(&1)) |> MapSet.new()
-    %__MODULE__{card: String.to_integer(index), winners: winning_numbers, elves: elves_numbers}
-  end
-
+  @increments [{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}]
+  @corners [{1, 1}, {1, -1}, {-1, -1}, {-1, 1}]
   def part1(input) do
-    state = make_state(input)
-
-    calculate_winnings(state)
+    %__MODULE__{}
+    |> setup(input)
+    |> find_words()
+    |> Map.get(:count)
   end
 
-  def calculate_winnings(state) do
-    Enum.map(state, fn card ->
-      elves_winners = MapSet.intersection(card.winners, card.elves)
-      %{card | winnings: payoff_of(MapSet.size(elves_winners))}
-    end)
-    |> Enum.reduce(0, fn card, sum -> sum + card.winnings end)
+  def setup(%__MODULE__{} = state, input) do
+    lines = String.upcase(input) |> String.split("\n")
+    n_cols = String.length(hd(lines))
+    n_rows = length(lines)
+    coords = for row <- 1..n_rows, col <- 1..n_cols, do: {row, col}
+
+    puzzle =
+      Enum.reduce(coords, %{}, fn coord, acc ->
+        Map.put(acc, coord, puzzle_fetch(lines, coord))
+      end)
+
+    xlocs = Enum.filter(coords, fn coord -> Map.get(puzzle, coord) == "X" end)
+    alocs = Enum.filter(coords, fn coord -> Map.get(puzzle, coord) == "A" end)
+    %{state | puzzle: puzzle, xlocations: xlocs, alocations: alocs, count: 0}
   end
 
-  def payoff_of(0), do: 0
-  def payoff_of(n), do: 2 ** (n - 1)
+  def puzzle_fetch(lines, {row, col} = _coord) when is_list(lines) do
+    Enum.at(lines, row - 1)
+    |> String.at(col - 1)
+  end
 
-  def make_state(input), do: input |> String.split("\n") |> Enum.map(&new(String.trim(&1)))
+  def find_words(%__MODULE__{} = state) do
+    Enum.reduce(state.xlocations, state, fn location, state -> find_words(state, location) end)
+  end
+
+  def find_words(%__MODULE__{} = state, {_row, _col} = loc) do
+    Enum.reduce(@increments, state, fn incr, state -> try_one_word_direction(state, loc, incr) end)
+  end
+
+  def try_one_word_direction(
+        %__MODULE__{} = state,
+        {row, col} = _location,
+        {row_incr, col_incr} = _dir_increment
+      ) do
+    test_info =
+      Enum.zip(for(mult <- 1..3, do: {row + row_incr * mult, col + col_incr * mult}), ~w/M A S/)
+
+    word? =
+      Enum.all?(test_info, fn {coord, letter} -> Map.get(state.puzzle, coord, "@") == letter end)
+
+    new_count = state.count + if word?, do: 1, else: 0
+    %{state | count: new_count}
+  end
 
   def part2(input) do
-    String.split(input, "\n")
-
-    _state =
-      make_state(input)
-      |> win_more_cards([])
-      |> calculate_number_of_cards()
+    %__MODULE__{}
+    |> setup(input)
+    |> find_max()
+    |> Map.get(:count)
   end
 
-  def win_more_cards([], examined_cards), do: Enum.reverse(examined_cards)
-
-  def win_more_cards([a_card | rest_of_cards] = _state, examined_cards) do
-    {a_card.card, length(rest_of_cards), length(examined_cards)} |> IO.inspect()
-    number_to_change = MapSet.intersection(a_card.winners, a_card.elves) |> MapSet.size()
-    number_to_add = a_card.count
-
-    {changed_cards, unchanged_cards} =
-      duplicate_cards(rest_of_cards, [], number_to_add, number_to_change)
-
-    new_cards =
-      (changed_cards ++ unchanged_cards)
-      |> List.flatten()
-      |> Enum.sort(fn a, b -> a.card <= b.card end)
-
-    win_more_cards(new_cards, [a_card | examined_cards])
+  def find_max(%__MODULE__{} = state) do
+    Enum.reduce(state.alocations, state, fn location, state -> find_x_mas(state, location) end)
   end
 
-  def duplicate_cards(pending_cards, done_cards, _number_to_add, 0),
-    do: {done_cards, pending_cards}
+  def find_x_mas(%__MODULE__{puzzle: puzzle} = state, {row, col} = location) do
+    IO.puts("------------------------------------------")
+    {location, Map.get(puzzle, location)} |> dbg
 
-  def duplicate_cards([this_card | rest_to_do], done_cards, number_to_add, number_to_change) do
-    changed_card = %{this_card | count: number_to_add + this_card.count}
-    duplicate_cards(rest_to_do, [changed_card | done_cards], number_to_add, number_to_change - 1)
-  end
+    corner_letters =
+      Enum.map(@corners, fn {row_inc, col_inc} ->
+        Map.get(puzzle, {row + row_inc, col + col_inc}, "@")
+      end)
+      |> Enum.sort()
+      |> dbg
 
-  def calculate_number_of_cards(cards) do
-    Enum.reduce(cards, 0, fn card, accum -> accum + card.count end)
-  end
+    count_increment =
+      if corner_letters != ~w/M M S S/ do
+        0
+      else
+        m_location_increments =
+          Enum.filter(@corners, fn {row_inc, col_inc} ->
+            Map.get(puzzle, {row + row_inc, col + col_inc}, "@") == "M"
+          end)
 
-  def get(file_fragment) do
-    file_name = Path.join([".", "games", "day-" <> file_fragment <> ".txt"])
-    File.read!(file_name) |> String.trim()
+        if Enum.map(m_location_increments, fn {row_inc, col_inc} -> row_inc + col_inc end)
+           |> Enum.sum() == 0,
+           do: 0,
+           else: 1 |> dbg
+      end
+
+    new_count = state.count + count_increment
+    %{state | count: new_count}
   end
 end
