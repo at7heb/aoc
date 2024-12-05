@@ -4,14 +4,17 @@ defmodule Mix.Tasks.D05.P1 do
   import AdventOfCode.Day05
 
   @shortdoc "Day 05 Part 1"
+  @day "05"
   def run(args) do
-    input = AdventOfCode.Day05.get("05-1")
+    input = AdventOfCode.Day00.get(@day)
+    test_input = AdventOfCode.Day00.get_test(@day)
 
     if Enum.member?(args, "-b"),
       do: Benchee.run(%{part_1: fn -> input |> part1() end}),
       else:
-        input
-        |> part1()
-        |> IO.inspect(label: "Part 1 Results")
+        (
+          IO.puts("Part 1  Results: #{part1(input)}")
+          IO.puts("Part 1 Test Results: #{part1(test_input)}")
+        )
   end
 end
