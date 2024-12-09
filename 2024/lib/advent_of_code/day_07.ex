@@ -1,168 +1,127 @@
 defmodule AdventOfCode.Day07 do
-  defstruct text: [],
-            hands: [],
-            bets: [],
-            hand_patterns: [],
-            hand_ranks: [],
-            ranked_hands_and_bets: [],
-            part: 1
+  # list of lists
+  # expression_terms; list_of_terms [[1,2,3], [4,5,6]]
+  # target_values: [6, 120]
+  # current_terms: list of terms we're working on [1,2,3]
+  # current_target: 6
+  # ones that work: [6, 120] -- the targets that work
+  defstruct list_of_terms: [],
+            target_values: [],
+            current_terms: [],
+            current_target: -1,
+            ones_that_work: []
 
   def part1(input) do
-    input
-    |> new(1)
-    # |> dbg
-    |> calculate_total()
+    %__MODULE__{}
+    |> setup(input)
+    |> find_ones_that_work
+    |> get_answer()
 
     # |> dbg
   end
 
-  def calculate_total(%__MODULE__{} = state) do
-    Enum.reduce(state.ranked_hands_and_bets, {0, 1}, fn {_hand, bet}, {total, order} ->
-      {total + bet * order, order + 1}
-    end)
-  end
-
-  def new(input, part) do
+  def setup(%__MODULE__{} = _state, input) do
     # convert AKQJT to EDCBA so the who sequence can be treated as a hex (or base 15) number
     # for sorting to determine the hand strength!
-    text =
-      String.replace(input, "A", "E")
-      |> String.replace("K", "D")
-      |> String.replace("Q", "C")
-      |> String.replace("J", "B")
-      |> String.replace("T", "A")
-      |> String.split("\n")
+    calibrations = String.split(input, "\n", trim: true)
 
-    pairs = Enum.map(text, fn line -> String.split(line, " ") end)
+    pairs = Enum.map(calibrations, fn line -> String.split(line, ": ") end)
 
-    hands =
-      if part == 1 do
-        Enum.map(pairs, fn [hand, _bet] -> String.split(hand, "", trim: true) end)
-      else
-        Enum.map(pairs, fn [hand, _bet] ->
-          String.replace(hand, "B", "1") |> String.split("", trim: true)
-        end)
-      end
+    {targets, lists} =
+      Enum.reduce(pairs, {[], []}, fn [target, text_list], {targets, lists} ->
+        [target, text_list] |> dbg
+        new_targets = (targets ++ [String.to_integer(target)]) |> dbg
+        term_text_list = String.split(text_list, " ", trim: true)
+        term_list = Enum.map(term_text_list, fn term_text -> String.to_integer(term_text) end)
 
-    bets = Enum.map(pairs, fn [_hand, bet] -> String.to_integer(bet) end)
+        new_lists =
+          (lists ++ [term_list]) |> dbg
 
-    hand_patterns =
-      Enum.map(hands, fn hand ->
-        Enum.frequencies(hand) |> Map.values() |> Enum.sort() |> List.to_tuple()
+        {new_targets, new_lists}
       end)
-
-    hand_ranks =
-      case part do
-        1 ->
-          Enum.map(hand_patterns, fn pat_tuple -> rank_for_hand_pattern(pat_tuple) end)
-
-        2 ->
-          jack_counts = Enum.map(hands, fn hand -> count_jacks(hand) end)
-          # |> dbg
-          {hand_patterns, jack_counts}
-
-          Enum.map(Enum.zip(hand_patterns, jack_counts), fn {pat_tuple, n_jacks} ->
-            rank_for_hand_pattern2(pat_tuple, n_jacks)
-          end)
-
-        _ ->
-          {:error, "illegal part: #{part}"}
-      end
-
-    hand_strength0 =
-      Enum.zip(hand_ranks, hands)
-      |> Enum.map(fn {rank, hand} ->
-        ([rank] ++ hand) |> Enum.join("") |> dbg |> String.to_integer(16)
-      end)
-
-    # |> dbg
-
-    to_sort =
-      Enum.zip(hand_strength0, bets)
-      |> dbg
-
-    sorted = Enum.sort(to_sort, fn {a0, _b0}, {a1, _b1} -> a0 <= a1 end)
 
     %__MODULE__{
-      text: text,
-      hands: hands,
-      bets: bets,
-      hand_patterns: hand_patterns,
-      hand_ranks: hand_ranks,
-      ranked_hands_and_bets: sorted,
-      part: part
+      list_of_terms: lists,
+      target_values: targets,
+      current_terms: [],
+      current_target: -1,
+      ones_that_work: []
     }
     |> dbg
   end
 
-  def rank_for_hand_pattern(pat_tuple) when is_tuple(pat_tuple) do
-    case pat_tuple do
-      {5} ->
-        "7"
+  def find_ones_that_work(%__MODULE__{list_of_terms: []} = state), do: state
 
-      {1, 4} ->
-        "6"
-
-      {2, 3} ->
-        "5"
-
-      {1, 1, 3} ->
-        "4"
-
-      {1, 2, 2} ->
-        "3"
-
-      {1, 1, 1, 2} ->
-        "2"
-
-      {1, 1, 1, 1, 1} ->
-        "1"
-    end
+  def find_ones_that_work(
+        %__MODULE__{
+          list_of_terms: [current_terms, rest_of_terms],
+          target_values: [current_target, rest_of_targets]
+        } = state
+      ) do
+    %{
+      state
+      | list_of_terms: rest_of_terms,
+        target_value: rest_of_targets,
+        current_terms: current_terms,
+        current_target: current_target
+    }
+    |> see_if_this_one_works()
+    |> find_ones_that_work()
   end
 
-  def rank_for_hand_pattern2(pat_tuple, n_jacks) do
-    case {pat_tuple, n_jacks} do
-      {_, 0} -> rank_for_hand_pattern(pat_tuple)
-      {{5}, 5} -> rank_for_hand_pattern(pat_tuple)
-      {{5}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{1, 4}, 1} -> rank_for_hand_pattern({5})
-      {{1, 4}, 4} -> rank_for_hand_pattern({5})
-      {{1, 4}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{2, 3}, 2} -> rank_for_hand_pattern({5})
-      {{2, 3}, 3} -> rank_for_hand_pattern({5})
-      {{2, 3}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{1, 1, 3}, 1} -> rank_for_hand_pattern({1, 4})
-      {{1, 1, 3}, 3} -> rank_for_hand_pattern({1, 4})
-      {{1, 1, 3}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{1, 2, 2}, 1} -> rank_for_hand_pattern({2, 3})
-      {{1, 2, 2}, 2} -> rank_for_hand_pattern({1, 4})
-      {{1, 1, 2}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{1, 1, 1, 2}, 1} -> rank_for_hand_pattern({1, 1, 3})
-      {{1, 1, 1, 2}, 2} -> rank_for_hand_pattern({1, 1, 3})
-      {{1, 1, 1, 2}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      {{1, 1, 1, 1, 1}, 1} -> rank_for_hand_pattern({1, 1, 1, 2})
-      {{1, 1, 1, 1, 1}, _} -> {:error, "rank2 #{pat_tuple} #{n_jacks}"}
-      _ -> {:error, "fell through in case #{pat_tuple} #{n_jacks}"}
-    end
+  def see_if_this_one_works(
+        %__MODULE__{current_target: target, current_terms: terms, ones_that_work: ones_that_work} =
+          state
+      ) do
+    op_val_lists = get_operator_and_value_lists(terms)
+    this_one_works = Enum.any?(op_val_lists, fn ovl -> target == eval(ovl) end)
+    add_to_ones = if this_one_works, do: [target], else: []
+    new_ones_that_work = (ones_that_work ++ add_to_ones) |> List.flatten() |> dbg
+    %{state | ones_that_work: new_ones_that_work}
   end
 
-  def count_jacks(card) do
-    card |> Enum.filter(fn a -> a == "1" end) |> length()
+  def get_operator_and_value_lists(terms) when is_list(terms) do
+    bit_count = length(terms) - 1
+    result_count = 2 ** bit_count
+
+    Enum.map(0..(result_count - 1), fn ops_in_binary ->
+      Enum.zip([:load] ++ arith_operator_list(bit_count, ops_in_binary), terms)
+    end)
+    |> dbg
+  end
+
+  def arith_operator_list(bit_count, ops_in_binary) do
+    {_, op_list} =
+      Enum.reduce(1..bit_count, {ops_in_binary, []}, fn _count, {ops_in_binary, op_list} ->
+        new_op = if rem(ops_in_binary, 2) == 1, do: :add, else: :multiply
+        {div(ops_in_binary, 2), [new_op | op_list]}
+      end)
+
+    op_list
+  end
+
+  def eval(op_and_term_list), do: eval(op_and_term_list, 0)
+  def eval([] = op_and_term_list, accumulator), do: accumulator
+
+  def eval([this_op_and_term | rest_of_op_and_term_list] = _op_and_term_list, accumulator) do
+    {op, term} = this_op_and_term |> dbg
+
+    case op do
+      :load -> term
+      :add -> accumulator + term
+      :multiply -> accumulator * term
+    end
+    |> dbg
+  end
+
+  def get_answer(%__MODULE__{} = state) do
+    Enum.sum(state.ones_that_work)
   end
 
   def part2(input) do
-    input
-    |> new(2)
-    # |> dbg
-    |> calculate_total()
+    %__MODULE__{}
+    |> setup(input)
 
-    # |> dbg
-  end
-
-  def get(file_fragment) do
-    # |> dbg
-    file_name = Path.join([".", "games", "day-" <> file_fragment <> ".txt"])
-    # |> dbg
-    File.read!(file_name) |> String.trim()
+    0
   end
 end
