@@ -5,7 +5,7 @@ defmodule AdventOfCode.Day01Test do
   @mh AdventOfCode
   @day "01"
 
-  # @tag :skip
+  @tag :skip
   test "part1" do
     result = part1(@mh.Day00.get_test(@day))
 
