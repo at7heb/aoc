@@ -9,18 +9,19 @@ defmodule AdventOfCode.Day07 do
             target_values: [],
             current_terms: [],
             current_target: -1,
-            ones_that_work: []
+            ones_that_work: [],
+            part: 0
 
   def part1(input) do
     %__MODULE__{}
-    |> setup(input)
+    |> setup(input, 1)
     |> find_ones_that_work
     |> get_answer()
 
     # |> dbg
   end
 
-  def setup(%__MODULE__{} = _state, input) do
+  def setup(%__MODULE__{} = _state, input, part) do
     # convert AKQJT to EDCBA so the who sequence can be treated as a hex (or base 15) number
     # for sorting to determine the hand strength!
     calibrations = String.split(input, "\n", trim: true)
@@ -29,13 +30,13 @@ defmodule AdventOfCode.Day07 do
 
     {targets, lists} =
       Enum.reduce(pairs, {[], []}, fn [target, text_list], {targets, lists} ->
-        [target, text_list] |> dbg
-        new_targets = (targets ++ [String.to_integer(target)]) |> dbg
+        [target, text_list]
+        new_targets = targets ++ [String.to_integer(target)]
         term_text_list = String.split(text_list, " ", trim: true)
         term_list = Enum.map(term_text_list, fn term_text -> String.to_integer(term_text) end)
 
         new_lists =
-          (lists ++ [term_list]) |> dbg
+          lists ++ [term_list]
 
         {new_targets, new_lists}
       end)
@@ -45,23 +46,23 @@ defmodule AdventOfCode.Day07 do
       target_values: targets,
       current_terms: [],
       current_target: -1,
-      ones_that_work: []
+      ones_that_work: [],
+      part: part
     }
-    |> dbg
   end
 
   def find_ones_that_work(%__MODULE__{list_of_terms: []} = state), do: state
 
   def find_ones_that_work(
         %__MODULE__{
-          list_of_terms: [current_terms, rest_of_terms],
-          target_values: [current_target, rest_of_targets]
+          list_of_terms: [current_terms | rest_of_terms],
+          target_values: [current_target | rest_of_targets]
         } = state
       ) do
     %{
       state
       | list_of_terms: rest_of_terms,
-        target_value: rest_of_targets,
+        target_values: rest_of_targets,
         current_terms: current_terms,
         current_target: current_target
     }
@@ -73,45 +74,55 @@ defmodule AdventOfCode.Day07 do
         %__MODULE__{current_target: target, current_terms: terms, ones_that_work: ones_that_work} =
           state
       ) do
-    op_val_lists = get_operator_and_value_lists(terms)
+    base = if state.part == 1, do: 2, else: 3
+    op_val_lists = get_operator_and_value_lists(terms, base)
     this_one_works = Enum.any?(op_val_lists, fn ovl -> target == eval(ovl) end)
     add_to_ones = if this_one_works, do: [target], else: []
-    new_ones_that_work = (ones_that_work ++ add_to_ones) |> List.flatten() |> dbg
+    new_ones_that_work = (ones_that_work ++ add_to_ones) |> List.flatten()
     %{state | ones_that_work: new_ones_that_work}
   end
 
-  def get_operator_and_value_lists(terms) when is_list(terms) do
-    bit_count = length(terms) - 1
-    result_count = 2 ** bit_count
+  def get_operator_and_value_lists(terms, base) when is_list(terms) do
+    digit_count = length(terms) - 1
+    result_count = base ** digit_count
 
-    Enum.map(0..(result_count - 1), fn ops_in_binary ->
-      Enum.zip([:load] ++ arith_operator_list(bit_count, ops_in_binary), terms)
+    Enum.map(0..(result_count - 1), fn ops_in_base ->
+      Enum.zip([:load] ++ arith_operator_list(digit_count, ops_in_base, base), terms)
     end)
-    |> dbg
   end
 
-  def arith_operator_list(bit_count, ops_in_binary) do
+  def arith_operator_list(digit_count, ops_in_base, base) when base <= 3 do
     {_, op_list} =
-      Enum.reduce(1..bit_count, {ops_in_binary, []}, fn _count, {ops_in_binary, op_list} ->
-        new_op = if rem(ops_in_binary, 2) == 1, do: :add, else: :multiply
-        {div(ops_in_binary, 2), [new_op | op_list]}
+      Enum.reduce(1..digit_count, {ops_in_base, []}, fn _count, {ops_in_base, op_list} ->
+        new_op = elem({:add, :multiply, :concatenate}, rem(ops_in_base, base))
+        {div(ops_in_base, base), [new_op | op_list]}
       end)
 
     op_list
   end
 
   def eval(op_and_term_list), do: eval(op_and_term_list, 0)
-  def eval([] = op_and_term_list, accumulator), do: accumulator
+  def eval([] = _op_and_term_list, accumulator), do: accumulator
 
   def eval([this_op_and_term | rest_of_op_and_term_list] = _op_and_term_list, accumulator) do
-    {op, term} = this_op_and_term |> dbg
+    {op, term} = this_op_and_term
 
-    case op do
-      :load -> term
-      :add -> accumulator + term
-      :multiply -> accumulator * term
-    end
-    |> dbg
+    new_accumulator =
+      case op do
+        :load ->
+          term
+
+        :add ->
+          accumulator + term
+
+        :multiply ->
+          accumulator * term
+
+        :concatenate ->
+          (Integer.to_string(accumulator) <> Integer.to_string(term)) |> String.to_integer()
+      end
+
+    eval(rest_of_op_and_term_list, new_accumulator)
   end
 
   def get_answer(%__MODULE__{} = state) do
@@ -120,8 +131,8 @@ defmodule AdventOfCode.Day07 do
 
   def part2(input) do
     %__MODULE__{}
-    |> setup(input)
-
-    0
+    |> setup(input, 2)
+    |> find_ones_that_work
+    |> get_answer()
   end
 end
