@@ -2,6 +2,7 @@ defmodule AdventOfCode.Day09 do
   defstruct input: "",
             file_map: %{},
             free_map: %{},
+            free_sizes: %{},
             current_sector: 0,
             current_file: 0,
             current_free: 0,
@@ -21,9 +22,14 @@ defmodule AdventOfCode.Day09 do
   end
 
   def checksum(%__MODULE__{} = state) do
-    checksum = Map.to_list(state.file_map) |> Enum.map(fn {file_id, file_sectors} -> file_id * Enum.sum(file_sectors) end) |> Enum.sum()
+    checksum =
+      Map.to_list(state.file_map)
+      |> Enum.map(fn {file_id, file_sectors} -> file_id * Enum.sum(file_sectors) end)
+      |> Enum.sum()
+
     %{state | check_sum: checksum}
   end
+
   def compact(%__MODULE__{} = state) do
     first_free_sector = -55
 
@@ -47,12 +53,12 @@ defmodule AdventOfCode.Day09 do
       state.current_file <= 0 -> state
       true -> maybe_move_some_sectors(state) |> compact1()
     end
-
   end
 
   def maybe_move_some_sectors(state = %__MODULE__{}) do
     current_file = Map.get(state.file_map, state.current_file)
     current_free = Map.get(state.free_map, state.current_free)
+
     cond do
       current_free == [] -> handle_next_free(state)
       current_file == [] -> handle_next_file(state)
@@ -65,9 +71,15 @@ defmodule AdventOfCode.Day09 do
     [_last_file | restof_file] = Map.get(state.file_map, state.current_file) |> Enum.reverse()
     [first_free | restof_free] = Map.get(state.free_map, state.current_free)
     new_file = [first_free | restof_file] |> Enum.sort()
-    new_file_map = Map.put(state.file_map, state.current_file, new_file )
+    new_file_map = Map.put(state.file_map, state.current_file, new_file)
     new_free_map = Map.put(state.free_map, state.current_free, restof_free)
-    %{state | file_map: new_file_map, free_map: new_free_map, free_sectors: state.free_sectors - 1}
+
+    %{
+      state
+      | file_map: new_file_map,
+        free_map: new_free_map,
+        free_sectors: state.free_sectors - 1
+    }
   end
 
   def handle_next_file(state = %__MODULE__{}) do
@@ -160,7 +172,49 @@ defmodule AdventOfCode.Day09 do
   end
 
   def part2(input) do
-    # TODO -- fix
-    String.length(input)
+    %__MODULE__{}
+    |> parse(input)
+    |> info()
+    |> compact2()
+    |> checksum()
+    |> dbg
+  end
+
+  def compact2(%__MODULE__{} = state) do
+    state
+    |> set_up_for_compaction()
+    |> compact2bis()
+  end
+
+  def compact2bis(%__MODULE__{} = state) do
+    Enum.reduce_while(state.file_count-1..0\\-1, {:error, state}, fn file_index, {_, state} -> compact3(state, file_index) end)
+  end
+
+  def set_up_for_compaction(%__MODULE__{} = state) do
+    %{
+      state
+      | current_file: state.file_count - 1,
+        current_free: 0,
+        current_sector: -55
+    }
+    |> fill_free_sizes()
+  end
+
+  def find_first_free_as_big_as(%__MODULE__{} = state, size) do
+    no_good = {:error, "not big enough"}
+
+    Enum.reduce_while(0..(state.free_count - 1), no_good, fn index, _acc ->
+      if Map.get(state.free_sizes, index) >= size,
+        do: {:halt, {:ok, index}},
+        else: {:cont, no_good}
+    end)
+  end
+
+  def fill_free_sizes(%__MODULE__{} = state) do
+    free_sizes =
+      Map.to_list(state.free_map)
+      |> Enum.reduce(%{}, fn {id, blocks}, map -> Map.put(map, id, length(blocks)) end)
+
+    %{state | free_sizes: free_sizes}
   end
 end
