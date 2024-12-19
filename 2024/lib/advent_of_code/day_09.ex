@@ -14,8 +14,8 @@ defmodule AdventOfCode.Day09 do
             unused_sectors: [],
             input_copy: ""
 
-            # part2("9953877292941") should be 5768
-            # part2("1313165") should be 169
+  # part2("9953877292941") should be 5768
+  # part2("1313165") should be 169
   def part1(input) do
     %__MODULE__{}
     |> parse(input)
@@ -176,39 +176,53 @@ defmodule AdventOfCode.Day09 do
   end
 
   def part2(input) do
-    answer = %__MODULE__{}
-    |> parse(input)
-    |> info()
-    |> compact2()
-    |> checksum();
+    answer =
+      %__MODULE__{}
+      |> parse(input)
+      |> info()
+      |> compact2()
+      |> checksum()
+
     answer.check_sum |> dbg
     answer
   end
 
   def compact2(%__MODULE__{} = state) do
-    new_state = state
-    |> set_up_for_compaction()
-    |> compact2bis()
-    %{new_state | unused_sectors: List.flatten(state.unused_sectors)|>Enum.sort()}
+    new_state =
+      state
+      |> set_up_for_compaction()
+      |> compact2bis()
+
+    %{new_state | unused_sectors: List.flatten(state.unused_sectors) |> Enum.sort()}
   end
 
   def compact2bis(%__MODULE__{} = state) do
-    _state = Enum.reduce_while(state.file_count-1..0//-1, state, fn file_index, state -> compact3(state, file_index) end)
+    _state =
+      Enum.reduce_while((state.file_count - 1)..0//-1, state, fn file_index, state ->
+        compact3(state, file_index)
+      end)
+
     # {status} |> dbg
     # state |> dbg
   end
 
   def compact3(%__MODULE__{} = state, file_index) do
     file_size = Map.get(state.file_map, file_index) |> length
+
     if file_size == 0 do
       {:cont, state}
     else
       {status, free_index} = find_first_free_as_big_as(state, file_size)
+
       cond do
         # no free space fits this file, so just continue to next without changing state
-        status == :error -> {:cont, state}
+        status == :error ->
+          {:cont, state}
+
         # found a free spot, so move this file to it.
-        true -> state = move_whole_file(state, file_index, free_index); {:cont, state}
+        true ->
+          state = move_whole_file(state, file_index, free_index)
+          {:cont, state}
       end
     end
   end
@@ -216,15 +230,21 @@ defmodule AdventOfCode.Day09 do
   def move_whole_file(%__MODULE__{} = state, file_index, free_index) do
     file_size = Map.get(state.file_map, file_index) |> length
     free_sectors = Map.get(state.free_map, free_index)
-    new_file_sectors = Enum.slice(free_sectors, 0..file_size-1)
-    new_free_sectors = Enum.slice(free_sectors, file_size..9999999)
+    new_file_sectors = Enum.slice(free_sectors, 0..(file_size - 1))
+    new_free_sectors = Enum.slice(free_sectors, file_size..9_999_999)
     old_file_sectors = Map.get(state.file_map, file_index)
     new_file_map = Map.put(state.file_map, file_index, new_file_sectors)
     new_free_map = Map.put(state.free_map, free_index, new_free_sectors)
     new_free_sizes = Map.put(state.free_sizes, free_index, length(new_free_sectors))
     new_unused_sectors = [old_file_sectors | state.unused_sectors]
     # {old_file_sectors, new_file_sectors, free_sectors, new_free_sectors} |> dbg
-    %{state | file_map: new_file_map, free_map: new_free_map, free_sizes: new_free_sizes, unused_sectors: new_unused_sectors}
+    %{
+      state
+      | file_map: new_file_map,
+        free_map: new_free_map,
+        free_sizes: new_free_sizes,
+        unused_sectors: new_unused_sectors
+    }
   end
 
   def set_up_for_compaction(%__MODULE__{} = state) do
