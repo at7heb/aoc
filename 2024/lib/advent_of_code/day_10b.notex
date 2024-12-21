@@ -1,0 +1,10 @@
+defmodule AdventOfCode.Day10b do
+  defstruct paths: [],
+  current_path: [],
+  map: %{}
+
+  def new(map, coord) do
+    {altitude, steps_from_here} = Map.get(map, coord)
+    %{%__MODULE__{}|map: map, current_path: [{coord, 1}]}
+  end
+end
