@@ -76,6 +76,16 @@ defmodule AdventOfCode.Day10 do
   end
 
   def info(%__MODULE__{} = state) do
+    IO.puts("#{state.max_col*state.max_row} places on the map")
+    map_as_list = Map.to_list(state.map)
+    average_altitude = (map_as_list |> Enum.map(fn {_coord, {altitude, _steps}} -> altitude end) |> Enum.sum()) / (state.max_col*state.max_row)
+    trailhead_count = (map_as_list |> Enum.map(fn {_coord, {altitude, _steps}} -> altitude end)) |> Enum.filter(fn altitude -> altitude == 0 end) |> length()
+    peak_count = (map_as_list |> Enum.map(fn {_coord, {altitude, _steps}} -> altitude end)) |> Enum.filter(fn altitude -> altitude == 0 end) |> length()
+    average_steps = (map_as_list |> Enum.map(fn {_coord, {_altitude, steps}} -> length(steps) end) |> Enum.sum()) / (state.max_col*state.max_row)
+    IO.puts("#{trailhead_count} trailheads")
+    IO.puts("#{peak_count} peaks")
+    IO.puts("#{average_altitude} average altitude")
+    IO.puts("#{average_steps} steps per point (average)")
     state
   end
 
@@ -89,14 +99,15 @@ defmodule AdventOfCode.Day10 do
   end
 
   def find_trails(%__MODULE__{} = state) do
-    trails = Enum.reduce(state.trail_heads, [], fn coord, trails -> trails ++ find_trails_from(state, coord) end)
-    %{state| trails: trails}
+    # trails = Enum.reduce(state.trail_heads, [], fn coord, trails -> trails ++ find_trails_from(state, coord) end)
+    # %{state| trails: trails}
+    state
   end
 
-  def find_trails_from(state, coord) do
-    {_, steps} = Map.get(state.map, coord)
-  []
-  end
+  # def find_trails_from(state, coord) do
+    # {_, steps} = Map.get(state.map, coord)
+  # []
+  # end
 
   def sum(%__MODULE__{} = state) do
     state
