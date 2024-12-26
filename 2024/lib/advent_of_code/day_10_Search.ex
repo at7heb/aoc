@@ -5,10 +5,11 @@ defmodule AdventOfCode.Day10Search do
             map: %{},
             trail_head: {},
             # map from trailhead to MapSet with peaks
-            peaks_from_trail_heads: %{}
+            peaks_from_trail_heads: %{},
+            part: 0
 
-  def new(map) do
-    %{%__MODULE__{} | map: map}
+  def new(map, part) do
+    %{%__MODULE__{} | map: map, part: part}
   end
 
   def new_trail_head(%__MODULE__{} = search, {_, _} = trail_head) do
@@ -74,7 +75,7 @@ defmodule AdventOfCode.Day10Search do
     %{search | current_path: new_current_path}
   end
 
-  def add_current_peak(%__MODULE__{} = search, 1) do
+  def add_current_peak(%__MODULE__{part: 1} = search) do
     current_peaks = Map.get(search.peaks_from_trail_heads, search.trail_head, MapSet.new())
     {peak, _} = hd(search.current_path)
     peaks = MapSet.put(current_peaks, peak)
@@ -85,14 +86,17 @@ defmodule AdventOfCode.Day10Search do
     }
   end
 
-  def add_current_peak(%__MODULE__{} = search, 2) do
-    current_peaks = Map.get(search.peaks_from_trail_heads, search.trail_head, [])
+  def add_current_peak(%__MODULE__{part: 2, peaks_from_trail_heads: %{}} = search) do
+    %{search | peaks_from_trail_heads: []}
+  end
+
+  def add_current_peak(%__MODULE__{part: 2} = search) do
     {peak, _} = hd(search.current_path)
-    peaks = MapSet.put(current_peaks, peak)
+    peaks = [peak | search.peaks_from_trail_heads]
 
     %{
       search
-      | peaks_from_trail_heads: Map.put(search.peaks_from_trail_heads, search.trail_head, peaks)
+      | peaks_from_trail_heads: peaks
     }
   end
 end

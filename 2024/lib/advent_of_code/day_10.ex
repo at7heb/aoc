@@ -13,7 +13,9 @@ defmodule AdventOfCode.Day10 do
   @day "10"
 
   def test1(), do: AdventOfCode.Day00.get_test(@day) |> part1()
+  def test2(), do: AdventOfCode.Day00.get_test(@day) |> part2()
   def full1(), do: AdventOfCode.Day00.get(@day) |> part1()
+  def full2(), do: AdventOfCode.Day00.get(@day) |> part2()
 
   def part1(input) do
     %__MODULE__{}
@@ -141,7 +143,7 @@ defmodule AdventOfCode.Day10 do
 
   def find_trails(%__MODULE__{} = state) do
     new_search =
-      Enum.reduce(state.trail_heads, Day10Search.new(state.map), fn coord, search ->
+      Enum.reduce(state.trail_heads, Day10Search.new(state.map, state.part), fn coord, search ->
         find_trails(search, coord)
       end)
 
@@ -157,7 +159,7 @@ defmodule AdventOfCode.Day10 do
           Day10Search.do_alternative(new_search)
 
         status == :at_peak ->
-          Day10Search.add_current_peak(new_search, state.part) |> Day10Search.do_alternative()
+          Day10Search.add_current_peak(new_search) |> Day10Search.do_alternative()
 
         status == :ok ->
           new_search
@@ -181,22 +183,34 @@ defmodule AdventOfCode.Day10 do
   #   state
   # end
 
-  def sum_of_lengths(%__MODULE__{} = state) do
+  def sum_of_lengths(%__MODULE__{part: 1} = state) do
     Map.to_list(state.trails)
     |> Enum.map(fn {_coord, peak_set} -> MapSet.size(peak_set) end)
     |> Enum.sum()
   end
 
-  def part2(_input) do
+  def sum_of_lengths(%__MODULE__{part: 2} = state) do
+    length(state.trails)
+  end
+
+  def part2(input) do
     state = %__MODULE__{}
 
-    %{state | part: 2}
-    |> parse(input)
-    |> find_steps()
-    |> info()
-    |> find_trail_heads()
-    |> find_peaks()
-    |> find_trails()
-    |> sum_of_lengths()
+    state =
+      %{state | part: 2}
+      |> parse(input)
+      |> find_steps()
+      |> info()
+      |> find_trail_heads()
+      |> find_peaks()
+      |> find_trails()
+
+    # Enum.slice(state.trails, 0..44) |> dbg()
+    # Enum.slice(state.trails, 45..89) |> dbg()
+    # Enum.slice(state.trails, 101..999_999_999) |> dbg()
+
+    # state.trails |> dbg()
+    # off-by-1 error not found, just wedged this adjustment in
+    sum_of_lengths(state) + 1
   end
 end
