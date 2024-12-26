@@ -1,5 +1,5 @@
 defmodule AdventOfCode.Day10 do
-  alias AdventOfCode.Day10.Search
+  alias AdventOfCode.Day10Search
 
   defstruct input: "",
             max_row: 0,
@@ -7,7 +7,8 @@ defmodule AdventOfCode.Day10 do
             map: %{},
             trail_heads: [],
             peaks: [],
-            trails: []
+            trails: [],
+            part: 1
 
   @day "10"
 
@@ -21,9 +22,10 @@ defmodule AdventOfCode.Day10 do
     |> info()
     |> find_trail_heads()
     |> find_peaks()
-    # |> find_trails()
-    # |> sum()
-    |> dbg
+    |> find_trails()
+    |> sum_of_lengths()
+
+    # |> dbg
   end
 
   def find_steps(%__MODULE__{} = state) do
@@ -138,90 +140,63 @@ defmodule AdventOfCode.Day10 do
   end
 
   def find_trails(%__MODULE__{} = state) do
-    trails =
-      Enum.reduce(state.trail_heads, [], fn coord, trails ->
-        trails ++ find_trails_from(state, coord)
+    new_search =
+      Enum.reduce(state.trail_heads, Day10Search.new(state.map), fn coord, search ->
+        find_trails(search, coord)
       end)
 
-    %{state | trails: trails}
+    %{state | trails: new_search.peaks_from_trail_heads}
   end
 
-  def find_trails_from(state, coord) do
-    {_, steps} = Map.get(state.map, coord)
-    find_trails_from_with_steps(state, [coord], steps)
+  def find_trails(%Day10Search{} = search) do
+    {status, new_search} = Day10Search.advance(search)
+
+    new_search =
+      cond do
+        status == :at_end ->
+          Day10Search.do_alternative(new_search)
+
+        status == :at_peak ->
+          Day10Search.add_current_peak(new_search, state.part) |> Day10Search.do_alternative()
+
+        status == :ok ->
+          new_search
+
+        status == :no_hope ->
+          new_search
+      end
+
+    indicator = if status == :no_hope, do: :halt, else: :cont
+    {indicator, new_search}
   end
 
-  def find_trails_from_with_steps(state, trail, []) do
-    cond do
-      length(trail) == 9 -> trail
-      true -> []
-    end
+  def find_trails(%Day10Search{} = search, coord) do
+    search =
+      Day10Search.new_trail_head(search, coord)
+
+    Enum.reduce_while(1..999_999_999, search, fn _, search -> find_trails(search) end)
   end
 
-  def try_search(%__MODULE__{} = state) do
-  end
+  # def try_search(%__MODULE__{} = state) do
+  #   state
+  # end
 
-  def sum(%__MODULE__{} = state) do
-    state
+  def sum_of_lengths(%__MODULE__{} = state) do
+    Map.to_list(state.trails)
+    |> Enum.map(fn {_coord, peak_set} -> MapSet.size(peak_set) end)
+    |> Enum.sum()
   end
 
   def part2(_input) do
-  end
-end
+    state = %__MODULE__{}
 
-defmodule AdventOfCode.Day10.Search do
-            # eachelement of current_path is {coordinate, steps}
-            # add new segments at beginning; trailhead is last element
-  defstruct current_path: [],
-            map: %{},
-            trail_head: {}
-            peaks_from_trail_heads: %{} # map from trailhead to MapSet with peaks
-
-  def new(map, coord) do
-    {altitude, steps_from_here} = Map.get(map, coord)
-    %{%__MODULE__{} | map: map, current_path: [{coord, steps_from_here}], trail_head: coord}
-  end
-
-  def new_trail_head(%__MODULE__{} = search, {_,_}=trail_head) do
-    {altitude, steps_from_here} = Map.get(map, coord)
-    %{search | current_path: [{coord, steps_from_here}], trail_head: coord}
-  end
-
-  # go to the first step
-  def advance(%__MODULE__{} = search) do
-    {_altitude, steps_from_here} = hd(search.current_path)
-    cond do
-      steps_from_here == [] -> {:at_end, search}
-      true ->
-        new_current_place = hd(steps_from_here);
-        {_altitude, new_steps} = Map.get(search.map, new_current_place)
-        new_path = [{new_current_place, new_steps} | search.current_path]
-        new_search = %{search | current_path: new_path}
-        {:ok, search}
-  end
-
-  def is_at_peak?((%__MODULE__{} = search) do
-    {altitude, steps} = hd(search.current_path)
-    cond do
-      altitude == 9 && steps == [] -> true
-      altitude == 9 && steps != [] -> 1/0
-      true -> false
-  end
-
-  def try_alternative((%__MODULE__{} = search) do
-    {current_place, next_steps} = hd(search.current_path)
-    cond do
-      next_steps == [] -> {:backtrack, search}
-    true ->
-      [_ | remaining_steps] = next_steps
-
-
-  end
-
-  def add_current_peak(%__MODULE__{} = search) do
-    current_peaks = Map.get(search.peaks_from_trail_heads, seach.trail_head, MapSet.new())
-    {peak, _} = hd(search.current_path)
-    peaks = MapSet.put(current_peaks, peak)
-    %{search | peaks_from_trail_heads: Map.put(search.peak_from_trail_heads, search.trail_head, peaks)}
+    %{state | part: 2}
+    |> parse(input)
+    |> find_steps()
+    |> info()
+    |> find_trail_heads()
+    |> find_peaks()
+    |> find_trails()
+    |> sum_of_lengths()
   end
 end
