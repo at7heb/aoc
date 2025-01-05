@@ -99,7 +99,7 @@ defmodule AdventOfCode.Day03 do
       end
 
     new_s = String.slice(s, position, 999_999_999)
-    %{state | subject: new_s, enable: enable}
+    %{state | subject: new_s, enabled: enable}
   end
 
   def do_dont_region(nil), do: {0, 1}
