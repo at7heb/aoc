@@ -1,5 +1,6 @@
 defmodule AdventOfCode.Day11 do
   defstruct stones: [],
+            stone_map: %{},
             current_stone: 0,
             stone_count: 0
 
@@ -60,21 +61,21 @@ defmodule AdventOfCode.Day11 do
     end)
   end
 
-  def blink2(%__MODULE__{} = state, number_of_times) do
-    cond do
-      length(state.stones) == 0 ->
-        state
+  # def blink2(%__MODULE__{} = state, number_of_times) do
+  #   cond do
+  #     length(state.stones) == 0 ->
+  #       state
 
-      true ->
-        [stone | rest_of_stones] = state.stones
-        new_state = %{state | stones: rest_of_stones}
-        {stone, length(rest_of_stones)} |> dbg
+  #     true ->
+  #       [stone | rest_of_stones] = state.stones
+  #       new_state = %{state | stones: rest_of_stones}
+  #       {stone, length(rest_of_stones)} |> dbg
 
-        blink_one_stone(new_state, stone, number_of_times)
-        # |> dbg
-        |> blink2(number_of_times)
-    end
-  end
+  #       blink_one_stone(new_state, stone, number_of_times)
+  #       # |> dbg
+  #       |> blink2(number_of_times)
+  #   end
+  # end
 
   def blink_one_stone(%__MODULE__{} = state, _stone, 0), do: state
 
@@ -102,13 +103,62 @@ defmodule AdventOfCode.Day11 do
     length(state.stones)
   end
 
-  def answer2(%__MODULE__{} = state), do: state.stone_count
+  def answer2(%__MODULE__{} = state) do
+    Map.to_list(state.stone_map)
+    |> Enum.reduce(0, fn {_stone, count}, sum -> sum + count end)
+  end
 
-  def part2(input) do
+  def list_to_map(%__MODULE__{} = state) do
+    new_stone_map =
+      Enum.reduce(state.stones, %{}, fn stone, map ->
+        Map.put(map, stone, Map.get(map, stone, 0) + 1)
+      end)
+
+    %{state | stone_map: new_stone_map}
+  end
+
+  def blink2(%__MODULE__{} = state, number_of_times) when number_of_times <= 0, do: state
+
+  def blink2(%__MODULE__{} = state, number_of_times) when number_of_times > 0 do
+    new_stone_map =
+      Map.to_list(state.stone_map)
+      |> Enum.reduce(%{}, fn {stone, count}, map ->
+        update_stone_map(map, state.stone_map, transform_one_stone(stone), count)
+      end)
+
+    %{state | stone_map: new_stone_map}
+    |> blink2(number_of_times - 1)
+  end
+
+  def update_stone_map(%{} = stone_map, %{} = _old_stone_map, [stone], count)
+      when is_binary(stone) and is_integer(count) and count >= 1 do
+    Map.put(stone_map, stone, count + Map.get(stone_map, stone, 0))
+  end
+
+  def update_stone_map(%{} = stone_map, %{} = old_stone_map, [stone1, stone2], count)
+      when is_binary(stone1) and is_binary(stone2) and is_integer(count) and count >= 1 do
+    update_stone_map(stone_map, old_stone_map, [stone1], count)
+    |> update_stone_map(old_stone_map, [stone2], count)
+  end
+
+  def info2(%__MODULE__{} = state) do
+    sum = answer2(state)
+    number_of_stone_types = map_size(state.stone_map)
+
+    IO.puts(
+      "#{number_of_stone_types} stone types, #{sum} stones, #{sum / number_of_stone_types} stones per type"
+    )
+
+    state
+  end
+
+  def part2(input, count \\ 75) when is_integer(count) do
     %__MODULE__{}
     |> parse(input)
+    |> list_to_map()
+    |> blink2(count)
     |> dbg
-    |> blink2(75)
+    |> info2()
     |> answer2()
   end
 
