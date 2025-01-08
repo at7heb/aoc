@@ -7,4 +7,5 @@ defmodule AdventOfCode.Day00 do
   end
 
   def get_test(file_fragment), do: get(file_fragment <> "-test")
+  def get_test(file_fragment, seq), do: get(file_fragment <> "-test#{seq}")
 end
