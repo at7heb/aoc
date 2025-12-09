@@ -30,6 +30,7 @@ defmodule A01 do
     moves
   end
 
+  # more that 7363
   def part2(moves) do
     answer_input =
       Enum.reduce(moves, [{50, 0}], fn move, position_list ->
@@ -37,11 +38,10 @@ defmodule A01 do
       end)
 
     Enum.reverse(answer_input) |> dbg
-    answer1 = Enum.filter(answer_input, fn {pos, _count} -> pos == 0 end) |> length()
-    answer2 = Enum.map(answer_input, fn {_pos, count} -> count end) |> Enum.sum()
-    answer = answer1 + answer2
+    # answer1 = Enum.filter(answer_input, fn {pos, _count} -> pos == 0 end) |> length()
+    answer = Enum.map(answer_input, fn {_pos, count} -> count end) |> Enum.sum()
     IO.puts("part 2 answer: #{answer}")
-    moves
+    nil
   end
 
   def move_to({"L", distance}, position) do
@@ -52,41 +52,52 @@ defmodule A01 do
     (position + distance) |> rem(100)
   end
 
-  def move_to2({"L", distance}, {position, _count}) do
-    # position1 = (position - distance) |> rem(100)
-    # position = if position1 < 0, do: position1 + 100, else: position
-    position1 = (position - distance + 1500) |> rem(100)
-    count0 = div(distance, 100)
+  def move_to2({"L", distance}, {position, _count}), do: mov2(distance, -1, position, 0)
+  def move_to2({"R", distance}, {position, _count}), do: mov2(distance, 1, position, 0)
 
-    count =
-      if position1 == 0 do
-        count0
-      else
-        div(position - distance - 100, -100)
-      end
+  def mov2(0, _increment, position, count), do: {position, count}
 
-    IO.puts("L#{distance} = {#{position},#{position1},#{distance},#{count}}")
-    {position1, count}
+  def mov2(distance, increment, position, count) do
+    new_position = position + increment
+
+    cond do
+      new_position == 100 -> mov2(distance - 1, increment, 0, count + 1)
+      new_position == -1 -> mov2(distance - 1, increment, 99, count)
+      new_position == 0 -> mov2(distance - 1, increment, 0, count + 1)
+      true -> mov2(distance - 1, increment, new_position, count)
+    end
   end
 
-  def move_to2({"R", distance}, {position, _count}) do
-    position1 = (position + distance) |> rem(100)
-    count0 = div(distance, 100)
+  # def move_to2({"L", distance}, {position, _count}) do
+  #   # position1 = (position - distance) |> rem(100)
+  #   # position = if position1 < 0, do: position1 + 100, else: position
+  #   position1 = (position - distance + 1000) |> rem(100)
+  #   count0 = div(distance, 100)
+  #   count1 = if position1 > position, do: 1, else: 0
+  #   count2 = if position1 == 0, do: 1, else: 0
 
-    count =
-      if position1 == 0 do
-        count0
-      else
-        div(position + distance, 100)
-      end
+  #   count = (count0 + count1 + count2) |> dbg
 
-    IO.puts("R#{distance} = {#{position},#{position1},#{distance},#{count}}")
-    {position1, count}
-  end
+  #   IO.puts("L#{distance} = {#{position},#{position1},#{distance},#{count}}")
+  #   {position1, count}
+  # end
+
+  # def move_to2({"R", distance}, {position, _count}) do
+  #   position1 = (position + distance) |> rem(100)
+
+  #   count0 = div(distance, 100)
+  #   count1 = if position1 < position, do: 1, else: 0
+  #   count2 = if position1 == 0, do: 1, else: 0
+
+  #   count = (count0 + count1 + count2) |> dbg
+
+  #   IO.puts("R#{distance} = {#{position},#{position1},#{distance},#{count}}")
+  #   {position1, count}
+  # end
 
   def test do
     """
-      L68
+    L68
     L30
     R48
     L5
