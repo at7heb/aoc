@@ -14,22 +14,21 @@ defmodule A03 do
 
 
   """
+  @infinity 999_999
+  @long_count 12
+
   def solve(input) do
     input
+    |> String.trim()
     |> String.split("\n")
     |> Enum.map(&String.trim(&1))
-    |> Enum.map(&String.split(&1, ""))
-    |> String.split(",")
-    |> dbg()
-    |> Enum.map(fn pair -> String.split(pair, "-") |> List.to_tuple() end)
-    |> Enum.map(fn {f, l} -> {String.to_integer(f), String.to_integer(l)} end)
     |> part1()
     |> part2()
+    |> part3()
 
     nil
   end
 
-  # answer 21139440284
   def part1(input) do
     part(input, 0, :first_part) |> answer()
     input
@@ -37,72 +36,125 @@ defmodule A03 do
 
   def part([], sum, _), do: sum
 
-  def part([first | rest] = _input, sum, which_part) do
-    {low, high} = first
-    new_sum = part(low, high, sum, which_part)
-    part(rest, new_sum, which_part)
+  def part([first | rest] = _input, sum, :first_part) do
+    line_list = String.to_charlist(first)
+
+    max = Enum.slice(line_list, 0..-2//1) |> Enum.max()
+    max_location = Enum.find_index(line_list, &(&1 == max))
+    next_max = Enum.slice(line_list, (max_location + 1)..-1//1) |> Enum.max()
+
+    joltage = (max - 0x30) * 10 + (next_max - 0x30)
+    part(rest, sum + joltage, :first_part)
   end
 
-  def part(low, high, sum, which_part) do
-    invalids =
-      Enum.filter(low..high, fn stock_number -> is_invalid?(stock_number, which_part) end)
+  # test answer 3121910778619 (web site)
+  # test answer 3121910778619 (mine)
+  # PROD
+  # too low:  170947122217284
+  # part3:    92805575548745
+  def part2(input),
+    do:
+      (
+        part2(input, 0)
+        input
+      )
 
-    sum + Enum.sum(invalids)
+  def part2([], sum), do: answer(sum)
+
+  def part2([first | rest], sum) do
+    max_list = find_max_12(String.to_charlist(first), 12, [])
+    this_joltage = List.to_string(max_list) |> String.to_integer()
+
+    if this_joltage < 100_000_000_000 or this_joltage > 999_999_999_999,
+      do: raise("joltage out of range #{this_joltage}")
+
+    IO.puts("p2 #{this_joltage}")
+    new_sum = sum + this_joltage
+    part2(rest, new_sum)
   end
 
-  def is_invalid?(value, :first_part) when is_integer(value) do
-    string_value = Integer.to_string(value)
+  def find_max_12(_list, 0, answer_list), do: Enum.reverse(answer_list)
 
-    cond do
-      rem(String.length(string_value), 2) == 1 -> false
-      true -> is_invalid?(string_value, :first_part)
+  @doc """
+  iterations shorten list, decrease needed, and lengthen answer_list
+  answer_list is reversed
+  """
+  def find_max_12(list, needed, answer_list) do
+    line_length = length(list)
+    # if needed = 12, then cannot look for max in the last 11 places
+    # so can look in the first line_length - (needed -1) positions
+    # max = Enum.slice(line_list, 0..-2//1) |> Enum.max() |> dbg
+    # max_location = Enum.find_index(line_list, &(&1 == max)) |> dbg
+
+    search_length = line_length - (needed - 1)
+
+    if needed == search_length do
+      find_max_12(tl(list), needed - 1, [hd(list) | answer_list])
+    else
+      max = Enum.slice(list, 0, line_length - (needed - 1)) |> Enum.max()
+      max_location = Enum.find_index(list, &(&1 == max))
+      new_list = Enum.slice(list, max_location + 1, @infinity)
+      find_max_12(new_list, needed - 1, [max | answer_list])
     end
   end
 
-  def is_invalid?(string_value, :first_part) when is_binary(string_value) do
-    len = div(String.length(string_value), 2)
-    first = String.slice(string_value, 0..(len - 1))
-    second = String.slice(string_value, len..-1//1)
-    first == second
+  def part3(input),
+    do:
+      (
+        part3(input, 0)
+        input
+      )
+
+  def part3([], sum), do: answer(sum)
+
+  def part3([first | rest], sum) do
+    [initial | rest_of_this] = String.to_charlist(first)
+    max_list = find_max_alg(rest_of_this, @long_count - 1, [initial])
+    this_joltage = List.to_string(max_list) |> String.to_integer()
+
+    if this_joltage < 100_000_000_000 or this_joltage > 999_999_999_999,
+      do: raise("joltage out of range #{this_joltage}")
+
+    IO.puts("p3 #{this_joltage}")
+    new_sum = sum + this_joltage
+    part3(rest, new_sum)
   end
 
-  @pairs [{1, 10}, {2, 5}, {3, 4}, {4, 3}, {5, 2}]
-  def is_invalid?(value, :second_part) when is_integer(value) do
-    string_value = Integer.to_string(value)
-
-    rv =
-      Enum.reduce_while(@pairs, false, fn {len, count}, _acc ->
-        if invalid_helper(string_value, len, count) do
-          IO.puts("part2: true for #{string_value} len #{len} count #{count}")
-          {:halt, true}
-        else
-          {:cont, false}
-        end
-      end)
-
-    rv
+  def find_max(line, needed) when is_binary(line) do
+    find_max_alg(String.to_charlist(line), needed, []) |> List.to_string() |> String.to_integer()
   end
 
-  def invalid_helper(s, len, count) do
-    s_len = String.length(s)
+  def find_max_alg(_list, 0, answer_list) do
+    Enum.reverse(answer_list)
+    |> Enum.slice(0, @long_count)
+  end
 
-    if rem(s_len, len) == 0 and s_len > len do
-      initial = String.slice(s, 0..(len - 1))
-      match = String.duplicate(initial, count)
-      trimmed_match = String.slice(match, 0..(s_len - 1))
-      s == trimmed_match
+  def find_max_alg([first | rest], needed, []) do
+    find_max_alg(rest, needed - 1, [first])
+  end
+
+  def find_max_alg([first | rest] = remaining, needed, answer_stack) do
+    # if needed = 12, then cannot look for max in the last 11 places
+    # so can look in the first line_length - (needed -1) positions
+    # max = Enum.slice(line_list, 0..-2//1) |> Enum.max() |> dbg
+    # max_location = Enum.find_index(line_list, &(&1 == max)) |> dbg
+    {remaining, needed, answer_stack} |> dbg
+
+    if needed == length(remaining) do
+      find_max_alg(rest, needed - 1, [first | answer_stack])
     else
-      false
+      if first <= hd(answer_stack) do
+        # add this one; it will be replaced if a bigger one is found
+        find_max_alg(rest, needed - 1, [first | answer_stack])
+      else
+        # this is a new max; replace the digit on top of the answer stack
+        find_max_alg(rest, needed, [first | tl(answer_stack)])
+      end
     end
   end
 
   def answer(sum) do
     sum |> dbg
-  end
-
-  def part2(input) do
-    part(input, 0, :second_part) |> answer()
-    input
   end
 
   def test do
